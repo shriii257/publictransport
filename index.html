@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Transport Feedback System</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-bus"></i> Smart Transport Feedback</h1>
+            <p>Improving public transport through citizen participation</p>
+        </div>
+
+        <div class="nav-tabs">
+            <button class="tab-btn active" onclick="showTab('passenger')">
+                <i class="fas fa-user"></i> Passenger Portal
+            </button>
+            <button class="tab-btn" onclick="showTab('admin')">
+                <i class="fas fa-tachometer-alt"></i> Admin Dashboard
+            </button>
+        </div>
+
+        <!-- Passenger Interface -->
+        <div id="passenger" class="tab-content active">
+            <div class="success-message" id="successMessage">
+                ✅ Thank you! Your feedback has been submitted successfully.
+            </div>
+            
+            <div class="feedback-form">
+                <h2>Share Your Travel Experience</h2>
+                
+                <form id="feedbackForm">
+                    <div class="form-group">
+                        <label><i class="fas fa-bus"></i> Transport Type</label>
+                        <select id="transportType" required>
+                            <option value="">Select transport type</option>
+                            <option value="bus">🚌 Bus</option>
+                            <option value="train">🚊 Train</option>
+                            <option value="metro">🚇 Metro</option>
+                            <option value="auto">🛺 Auto Rickshaw</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label><i class="fas fa-route"></i> Route/Line</label>
+                            <input type="text" id="route" placeholder="e.g., Route 32, Blue Line" required>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-map-marker-alt"></i> From - To</label>
+                            <input type="text" id="journey" placeholder="e.g., Shivaji Nagar to Kothrud" required>
+                        </div>
+                    </div>
+
+                    <div class="rating-section">
+                        <label><i class="fas fa-star"></i> Overall Rating</label>
+                        <div class="star-rating" id="starRating">
+                            <span class="star" data-rating="1">⭐</span>
+                            <span class="star" data-rating="2">⭐</span>
+                            <span class="star" data-rating="3">⭐</span>
+                            <span class="star" data-rating="4">⭐</span>
+                            <span class="star" data-rating="5">⭐</span>
+                        </div>
+                        <small id="ratingText">Click stars to rate</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-exclamation-triangle"></i> Problems Faced</label>
+                        <div class="problem-types">
+                            <div class="problem-type" data-problem="delay">
+                                <i class="fas fa-clock"></i> Delays
+                            </div>
+                            <div class="problem-type" data-problem="overcrowding">
+                                <i class="fas fa-users"></i> Overcrowding
+                            </div>
+                            <div class="problem-type" data-problem="cleanliness">
+                                <i class="fas fa-broom"></i> Poor Cleanliness
+                            </div>
+                            <div class="problem-type" data-problem="safety">
+                                <i class="fas fa-shield-alt"></i> Safety Issues
+                            </div>
+                            <div class="problem-type" data-problem="staff">
+                                <i class="fas fa-user-tie"></i> Staff Behavior
+                            </div>
+                            <div class="problem-type" data-problem="maintenance">
+                                <i class="fas fa-tools"></i> Poor Maintenance
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-comment"></i> Additional Comments</label>
+                        <textarea id="comments" rows="3" placeholder="Share your experience or suggestions..."></textarea>
+                    </div>
+
+                    <div class="location-section">
+                        <button type="button" class="location-btn" id="getLocationBtn">
+                            <i class="fas fa-crosshairs"></i> Add Location (Optional)
+                        </button>
+                        <span id="locationStatus"></span>
+                    </div>
+
+                    <button type="submit" class="submit-btn">
+                        <i class="fas fa-paper-plane"></i> Submit Feedback
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Admin Dashboard -->
+        <div id="admin" class="tab-content">
+            <h2><i class="fas fa-tachometer-alt"></i> Transport Authority Dashboard</h2>
+            
+            <div class="dashboard-stats">
+                <div class="stats-card">
+                    <i class="fas fa-comments"></i>
+                    <h3 id="totalFeedbacks">156</h3>
+                    <p>Total Feedbacks</p>
+                </div>
+                <div class="stats-card">
+                    <i class="fas fa-star"></i>
+                    <h3 id="avgRating">3.4</h3>
+                    <p>Average Rating</p>
+                </div>
+                <div class="stats-card">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <h3 id="activeIssues">23</h3>
+                    <p>Active Issues</p>
+                </div>
+                <div class="stats-card">
+                    <i class="fas fa-check-circle"></i>
+                    <h3 id="resolvedIssues">89</h3>
+                    <p>Resolved Issues</p>
+                </div>
+            </div>
+
+            <div class="charts-section">
+                <div class="chart-container">
+                    <h3><i class="fas fa-chart-pie"></i> Problem Distribution</h3>
+                    <canvas id="problemChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3><i class="fas fa-chart-line"></i> Daily Trends</h3>
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+
+            <div class="map-container">
+                <h3><i class="fas fa-map-marked-alt"></i> Route Hotspot Map</h3>
+                <div id="map">
+                    <div class="map-placeholder">
+                        <i class="fas fa-map"></i>
+                        <p>Interactive map showing problem-prone routes</p>
+                        <p class="map-note">Google Maps API integration ready</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="complaints-section">
+                <div class="section-header">
+                    <h3><i class="fas fa-list"></i> Recent Complaints</h3>
+                    <div class="filters">
+                        <button class="filter-btn active" onclick="filterComplaints('all')">All</button>
+                        <button class="filter-btn" onclick="filterComplaints('high')">High Priority</button>
+                        <button class="filter-btn" onclick="filterComplaints('bus')">Bus</button>
+                        <button class="filter-btn" onclick="filterComplaints('train')">Train</button>
+                        <button class="filter-btn" onclick="filterComplaints('metro')">Metro</button>
+                    </div>
+                </div>
+                <div class="complaints-list" id="complaintsList">
+                    <!-- Complaints populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
