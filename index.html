@@ -19,6 +19,9 @@
             <button class="tab-btn active" onclick="showTab('passenger')">
                 <i class="fas fa-user"></i> Passenger Portal
             </button>
+            <button class="tab-btn" onclick="showTab('public')">
+                <i class="fas fa-chart-bar"></i> Public Dashboard
+            </button>
             <button class="tab-btn" onclick="showTab('admin')">
                 <i class="fas fa-tachometer-alt"></i> Admin Dashboard
             </button>
@@ -93,6 +96,18 @@
                     </div>
 
                     <div class="form-group">
+                        <label><i class="fas fa-ticket-alt"></i> Upload Ticket/Photo (Optional)</label>
+                        <div class="file-upload-section">
+                            <input type="file" id="ticketUpload" accept="image/*,.pdf" style="display: none;">
+                            <button type="button" class="upload-btn" onclick="document.getElementById('ticketUpload').click()">
+                                <i class="fas fa-cloud-upload-alt"></i> Choose File
+                            </button>
+                            <span id="fileName" class="file-name">No file selected</span>
+                        </div>
+                        <small class="upload-info">Upload ticket or photo as evidence (Max 5MB, JPG/PNG/PDF)</small>
+                    </div>
+
+                    <div class="form-group">
                         <label><i class="fas fa-comment"></i> Additional Comments</label>
                         <textarea id="comments" rows="3" placeholder="Share your experience or suggestions..."></textarea>
                     </div>
@@ -111,29 +126,30 @@
             </div>
         </div>
 
-        <!-- Admin Dashboard -->
-        <div id="admin" class="tab-content">
-            <h2><i class="fas fa-tachometer-alt"></i> Transport Authority Dashboard</h2>
+        <!-- Public Dashboard -->
+        <div id="public" class="tab-content">
+            <h2><i class="fas fa-chart-bar"></i> Public Transport Dashboard</h2>
+            <p class="dashboard-subtitle">Real-time transparency in public transport management</p>
             
             <div class="dashboard-stats">
                 <div class="stats-card">
                     <i class="fas fa-comments"></i>
-                    <h3 id="totalFeedbacks">156</h3>
+                    <h3 id="publicTotalFeedbacks">156</h3>
                     <p>Total Feedbacks</p>
                 </div>
                 <div class="stats-card">
                     <i class="fas fa-star"></i>
-                    <h3 id="avgRating">3.4</h3>
+                    <h3 id="publicAvgRating">3.4</h3>
                     <p>Average Rating</p>
                 </div>
                 <div class="stats-card">
                     <i class="fas fa-exclamation-circle"></i>
-                    <h3 id="activeIssues">23</h3>
+                    <h3 id="publicActiveIssues">23</h3>
                     <p>Active Issues</p>
                 </div>
                 <div class="stats-card">
                     <i class="fas fa-check-circle"></i>
-                    <h3 id="resolvedIssues">89</h3>
+                    <h3 id="publicResolvedIssues">89</h3>
                     <p>Resolved Issues</p>
                 </div>
             </div>
@@ -141,17 +157,17 @@
             <div class="charts-section">
                 <div class="chart-container">
                     <h3><i class="fas fa-chart-pie"></i> Problem Distribution</h3>
-                    <canvas id="problemChart"></canvas>
+                    <canvas id="publicProblemChart"></canvas>
                 </div>
                 <div class="chart-container">
                     <h3><i class="fas fa-chart-line"></i> Daily Trends</h3>
-                    <canvas id="trendChart"></canvas>
+                    <canvas id="publicTrendChart"></canvas>
                 </div>
             </div>
 
             <div class="map-container">
                 <h3><i class="fas fa-map-marked-alt"></i> Route Hotspot Map</h3>
-                <div id="map">
+                <div id="publicMap">
                     <div class="map-placeholder">
                         <i class="fas fa-map"></i>
                         <p>Interactive map showing problem-prone routes</p>
@@ -162,17 +178,129 @@
 
             <div class="complaints-section">
                 <div class="section-header">
-                    <h3><i class="fas fa-list"></i> Recent Complaints</h3>
+                    <h3><i class="fas fa-list"></i> Recent Public Complaints</h3>
                     <div class="filters">
-                        <button class="filter-btn active" onclick="filterComplaints('all')">All</button>
-                        <button class="filter-btn" onclick="filterComplaints('high')">High Priority</button>
-                        <button class="filter-btn" onclick="filterComplaints('bus')">Bus</button>
-                        <button class="filter-btn" onclick="filterComplaints('train')">Train</button>
-                        <button class="filter-btn" onclick="filterComplaints('metro')">Metro</button>
+                        <button class="filter-btn active" onclick="filterPublicComplaints('all')">All</button>
+                        <button class="filter-btn" onclick="filterPublicComplaints('resolved')">Resolved</button>
+                        <button class="filter-btn" onclick="filterPublicComplaints('active')">Active</button>
+                        <button class="filter-btn" onclick="filterPublicComplaints('high')">High Priority</button>
                     </div>
                 </div>
-                <div class="complaints-list" id="complaintsList">
-                    <!-- Complaints populated by JavaScript -->
+                <div class="complaints-list" id="publicComplaintsList">
+                    <!-- Public complaints populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Dashboard -->
+        <div id="admin" class="tab-content">
+            <!-- Admin Login Form -->
+            <div id="adminLogin" class="admin-login">
+                <div class="login-form">
+                    <h2><i class="fas fa-lock"></i> Admin Login</h2>
+                    <form id="loginForm">
+                        <div class="form-group">
+                            <label><i class="fas fa-user"></i> Username</label>
+                            <input type="text" id="username" placeholder="Enter admin username" required>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-key"></i> Password</label>
+                            <input type="password" id="password" placeholder="Enter admin password" required>
+                        </div>
+                        <button type="submit" class="login-btn">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </button>
+                        <div id="loginError" class="error-message" style="display: none;">
+                            Invalid username or password
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Admin Dashboard Content -->
+            <div id="adminDashboard" style="display: none;">
+                <div class="admin-header">
+                    <h2><i class="fas fa-tachometer-alt"></i> Transport Authority Dashboard</h2>
+                    <button class="logout-btn" onclick="adminLogout()">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
+                </div>
+                
+                <div class="dashboard-stats">
+                    <div class="stats-card">
+                        <i class="fas fa-comments"></i>
+                        <h3 id="totalFeedbacks">156</h3>
+                        <p>Total Feedbacks</p>
+                    </div>
+                    <div class="stats-card">
+                        <i class="fas fa-star"></i>
+                        <h3 id="avgRating">3.4</h3>
+                        <p>Average Rating</p>
+                    </div>
+                    <div class="stats-card">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <h3 id="activeIssues">23</h3>
+                        <p>Active Issues</p>
+                    </div>
+                    <div class="stats-card">
+                        <i class="fas fa-check-circle"></i>
+                        <h3 id="resolvedIssues">89</h3>
+                        <p>Resolved Issues</p>
+                    </div>
+                </div>
+
+                <div class="charts-section">
+                    <div class="chart-container">
+                        <h3><i class="fas fa-chart-pie"></i> Problem Distribution</h3>
+                        <canvas id="problemChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3><i class="fas fa-chart-line"></i> Daily Trends</h3>
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="map-container">
+                    <h3><i class="fas fa-map-marked-alt"></i> Route Hotspot Map</h3>
+                    <div id="map">
+                        <div class="map-placeholder">
+                            <i class="fas fa-map"></i>
+                            <p>Interactive map showing problem-prone routes</p>
+                            <p class="map-note">Google Maps API integration ready</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="complaints-section">
+                    <div class="section-header">
+                        <h3><i class="fas fa-list"></i> Recent Complaints</h3>
+                        <div class="filters">
+                            <button class="filter-btn active" onclick="filterComplaints('all')">All</button>
+                            <button class="filter-btn" onclick="filterComplaints('high')">High Priority</button>
+                            <button class="filter-btn" onclick="filterComplaints('bus')">Bus</button>
+                            <button class="filter-btn" onclick="filterComplaints('train')">Train</button>
+                            <button class="filter-btn" onclick="filterComplaints('metro')">Metro</button>
+                            <button class="filter-btn" onclick="filterComplaints('resolved')">Resolved</button>
+                        </div>
+                    </div>
+                    <div class="complaints-list" id="complaintsList">
+                        <!-- Complaints populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ticket Viewer Modal -->
+    <div id="ticketModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-ticket-alt"></i> Ticket/Evidence</h3>
+                <span class="close" onclick="closeTicketModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="ticketViewer">
+                    <!-- Ticket content will be loaded here -->
                 </div>
             </div>
         </div>

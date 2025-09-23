@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template_string
+from flask import Flask, request, jsonify, render_template_string, send_file
 from flask_cors import CORS
 from datetime import datetime, timedelta
 import json
@@ -7,6 +7,8 @@ import uuid
 import sqlite3
 from contextlib import contextmanager
 import logging
+import base64
+import io
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -17,6 +19,11 @@ CORS(app)
 
 # Database configuration
 DATABASE = 'transport_feedback.db'
+UPLOAD_FOLDER = 'uploads'
+
+# Ensure upload folder exists
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
 
 def init_db():
     """Initialize the database with required tables"""
@@ -38,7 +45,12 @@ def init_db():
                 priority TEXT DEFAULT 'low',
                 location_lat REAL,
                 location_lng REAL,
-                user_id TEXT
+                user_id TEXT,
+                has_ticket BOOLEAN DEFAULT FALSE,
+                ticket_name TEXT,
+                ticket_path TEXT,
+                ticket_type TEXT,
+                ticket_size INTEGER
             )
         ''')
         
@@ -53,6 +65,20 @@ def init_db():
                 issue_count INTEGER DEFAULT 0,
                 avg_rating REAL DEFAULT 0,
                 last_updated TEXT
+            )
+        ''')
+        
+        # Files table for ticket storage
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS ticket_files (
+                id TEXT PRIMARY KEY,
+                feedback_id TEXT NOT NULL,
+                filename TEXT NOT NULL,
+                file_type TEXT NOT NULL,
+                file_size INTEGER NOT NULL,
+                file_data BLOB NOT NULL,
+                upload_time TEXT NOT NULL,
+                FOREIGN KEY (feedback_id) REFERENCES feedback (id)
             )
         ''')
         
@@ -97,6 +123,48 @@ def determine_priority(rating, problems):
         return 'medium'
     return 'low'
 
+def save_ticket_file(feedback_id, ticket_data):
+    """Save ticket file to database"""
+    if not ticket_data:
+        return None
+    
+    try:
+        # Extract base64 data
+        if ',' in ticket_data['data']:
+            header, base64_data = ticket_data['data'].split(',', 1)
+        else:
+            base64_data = ticket_data['data']
+        
+        # Decode base64
+        file_data = base64.b64decode(base64_data)
+        
+        # Generate file ID
+        file_id = str(uuid.uuid4())
+        
+        # Save to database
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO ticket_files 
+                (id, feedback_id, filename, file_type, file_size, file_data, upload_time)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                file_id,
+                feedback_id,
+                ticket_data['name'],
+                ticket_data['type'],
+                ticket_data['size'],
+                file_data,
+                datetime.now().isoformat()
+            ))
+            conn.commit()
+        
+        return file_id
+    
+    except Exception as e:
+        logger.error(f"Error saving ticket file: {e}")
+        return None
+
 @app.route('/')
 def index():
     """Serve a simple API status page"""
@@ -125,7 +193,7 @@ def index():
             
             <div class="endpoint">
                 <span class="method">POST</span> <strong>/api/feedback</strong>
-                <p>Submit new feedback from passengers</p>
+                <p>Submit new feedback from passengers (with file upload support)</p>
             </div>
             
             <div class="endpoint">
@@ -146,6 +214,11 @@ def index():
             <div class="endpoint">
                 <span class="method">PUT</span> <strong>/api/feedback/{id}/status</strong>
                 <p>Update feedback status (new, in_progress, resolved)</p>
+            </div>
+            
+            <div class="endpoint">
+                <span class="method">GET</span> <strong>/api/ticket/{feedback_id}</strong>
+                <p>Download/view uploaded ticket file</p>
             </div>
             
             <div class="endpoint">
@@ -182,14 +255,20 @@ def submit_feedback():
         problems = ','.join(data.get('problems', []))
         priority = determine_priority(data['rating'], problems)
         
+        # Handle ticket upload
+        ticket_file_id = None
+        if data.get('ticketData'):
+            ticket_file_id = save_ticket_file(feedback_id, data['ticketData'])
+        
         # Insert into database
         with get_db() as conn:
             cursor = conn.cursor()
             cursor.execute('''
                 INSERT INTO feedback 
                 (id, timestamp, transport_type, route, journey, rating, problems, 
-                 comments, status, priority, location_lat, location_lng, user_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 comments, status, priority, location_lat, location_lng, user_id,
+                 has_ticket, ticket_name, ticket_path, ticket_type, ticket_size)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 feedback_id,
                 datetime.now().isoformat(),
@@ -203,7 +282,12 @@ def submit_feedback():
                 priority,
                 data.get('latitude'),
                 data.get('longitude'),
-                data.get('userId', 'anonymous')
+                data.get('userId', 'anonymous'),
+                bool(data.get('hasTicket', False)),
+                data.get('ticketName'),
+                ticket_file_id,
+                data.get('ticketData', {}).get('type') if data.get('ticketData') else None,
+                data.get('ticketData', {}).get('size') if data.get('ticketData') else None
             ))
             conn.commit()
         
@@ -259,14 +343,45 @@ def get_feedback():
             cursor.execute(query, params)
             feedback = [dict(row) for row in cursor.fetchall()]
         
-        # Process problems field
+        # Process problems field and add ticket info
         for item in feedback:
             item['problems'] = item['problems'].split(',') if item['problems'] else []
+            # Add ticket URL if ticket exists
+            if item['has_ticket'] and item['ticket_path']:
+                item['ticket_url'] = f'/api/ticket/{item["id"]}'
         
         return jsonify({'feedback': feedback})
     
     except Exception as e:
         logger.error(f"Error getting feedback: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/ticket/<feedback_id>', methods=['GET'])
+def get_ticket(feedback_id):
+    """Get ticket file for feedback"""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT tf.filename, tf.file_type, tf.file_data, tf.file_size
+                FROM ticket_files tf
+                WHERE tf.feedback_id = ?
+            ''', (feedback_id,))
+            
+            result = cursor.fetchone()
+            if not result:
+                return jsonify({'error': 'Ticket not found'}), 404
+            
+            # Return file as response
+            return send_file(
+                io.BytesIO(result['file_data']),
+                mimetype=result['file_type'],
+                as_attachment=False,
+                download_name=result['filename']
+            )
+    
+    except Exception as e:
+        logger.error(f"Error getting ticket: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/stats', methods=['GET'])
@@ -328,6 +443,13 @@ def get_stats():
             ''')
             transport_distribution = {row['transport_type']: row['count'] 
                                     for row in cursor.fetchall()}
+            
+            # Files statistics
+            cursor.execute('SELECT COUNT(*) as files_count FROM ticket_files')
+            files_count = cursor.fetchone()['files_count']
+            
+            cursor.execute('SELECT SUM(file_size) as total_size FROM ticket_files')
+            total_file_size = cursor.fetchone()['total_size'] or 0
         
         return jsonify({
             'total_feedback': total_feedback,
@@ -336,7 +458,9 @@ def get_stats():
             'resolved_issues': resolved_issues,
             'problem_distribution': problem_counts,
             'daily_trends': daily_trends,
-            'transport_distribution': transport_distribution
+            'transport_distribution': transport_distribution,
+            'files_uploaded': files_count,
+            'total_file_size': total_file_size
         })
     
     except Exception as e:
@@ -490,14 +614,16 @@ def export_csv():
         
         # Write header
         writer.writerow(['ID', 'Timestamp', 'Transport Type', 'Route', 'Journey', 
-                        'Rating', 'Problems', 'Comments', 'Status', 'Priority'])
+                        'Rating', 'Problems', 'Comments', 'Status', 'Priority', 
+                        'Has Ticket', 'Ticket Name'])
         
         # Write data
         for row in feedback:
             writer.writerow([
                 row['id'], row['timestamp'], row['transport_type'], 
                 row['route'], row['journey'], row['rating'], 
-                row['problems'], row['comments'], row['status'], row['priority']
+                row['problems'], row['comments'], row['status'], row['priority'],
+                'Yes' if row['has_ticket'] else 'No', row['ticket_name'] or 'N/A'
             ])
         
         output.seek(0)
@@ -514,6 +640,50 @@ def export_csv():
         logger.error(f"Error exporting CSV: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/files/stats', methods=['GET'])
+def get_file_stats():
+    """Get file upload statistics"""
+    try:
+        with get_db() as conn:
+            cursor = conn.cursor()
+            
+            # Total files
+            cursor.execute('SELECT COUNT(*) as total_files FROM ticket_files')
+            total_files = cursor.fetchone()['total_files']
+            
+            # Total size
+            cursor.execute('SELECT SUM(file_size) as total_size FROM ticket_files')
+            total_size = cursor.fetchone()['total_size'] or 0
+            
+            # File types distribution
+            cursor.execute('''
+                SELECT file_type, COUNT(*) as count 
+                FROM ticket_files 
+                GROUP BY file_type
+            ''')
+            file_types = {row['file_type']: row['count'] for row in cursor.fetchall()}
+            
+            # Recent uploads
+            cursor.execute('''
+                SELECT tf.filename, tf.file_type, tf.upload_time, f.route, f.transport_type
+                FROM ticket_files tf
+                JOIN feedback f ON tf.feedback_id = f.id
+                ORDER BY tf.upload_time DESC
+                LIMIT 10
+            ''')
+            recent_uploads = [dict(row) for row in cursor.fetchall()]
+        
+        return jsonify({
+            'total_files': total_files,
+            'total_size': total_size,
+            'file_types': file_types,
+            'recent_uploads': recent_uploads
+        })
+    
+    except Exception as e:
+        logger.error(f"Error getting file stats: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.errorhandler(404)
 def not_found(error):
     return jsonify({'error': 'Endpoint not found'}), 404
@@ -522,7 +692,14 @@ def not_found(error):
 def internal_error(error):
     return jsonify({'error': 'Internal server error'}), 500
 
+@app.errorhandler(413)
+def request_entity_too_large(error):
+    return jsonify({'error': 'File too large. Maximum size is 5MB.'}), 413
+
 if __name__ == '__main__':
+    # Set maximum file size (5MB)
+    app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024
+    
     # Initialize database
     init_db()
     
@@ -532,13 +709,15 @@ if __name__ == '__main__':
     print("📊 Dashboard: http://localhost:5000")
     print("🔗 API Base URL: http://localhost:5000/api")
     print("📋 Endpoints:")
-    print("   POST /api/feedback - Submit feedback")
+    print("   POST /api/feedback - Submit feedback (with file upload)")
     print("   GET  /api/feedback - Get all feedback")
+    print("   GET  /api/ticket/<id> - View uploaded ticket")
     print("   GET  /api/stats - Get statistics")
     print("   GET  /api/hotspots - Get map hotspots")
     print("   PUT  /api/feedback/{id}/status - Update status")
+    print("   GET  /api/files/stats - File upload statistics")
     print("=" * 60)
-    print("✅ Server ready for hackathon demo!")
+    print("✅ Server ready with full ticket support!")
     print("=" * 60)
     
     app.run(debug=True, host='0.0.0.0', port=5000)
