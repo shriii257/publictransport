@@ -37,7 +37,23 @@ This platform provides a **central hub** for collecting, storing, and visualizin
 | Database   | SQLite                       |
 | Maps API   | Google Maps JavaScript API    |
 
----
+Project Structure
+publictransport/
+├─ static/        # CSS, JS, images
+├─ templates/     # HTML templates
+├─ app.py         # Flask backend
+├─ transport_feedback.db  # SQLite database
+└─ requirements.txt
+
+🔮 Future Scope
+
+AI-based complaint categorization
+
+Predictive analysis of recurring issues
+
+Mobile app integration
+
+Real-time crowd density & delay tracking
 
 ## 🚀 Quick Start
 
