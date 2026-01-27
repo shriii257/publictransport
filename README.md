@@ -1,7 +1,7 @@
 # 🚍 Public Transport Feedback & Monitoring Platform
 A web application that lets commuters report real-time problems in public transport (delays, overcrowding, infrastructure issues) and helps authorities analyze complaints, spot hotspots, and improve services.
 
-**🌐 Live Demo:** [https://publictransport-1.onrender.com](https://publictransport-1.onrender.com)
+Demo: [https://publictransport-1.onrender.com](https://publictransport-1.onrender.com)
 
 ---
 
