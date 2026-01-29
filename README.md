@@ -12,7 +12,6 @@ Public transport users often face:
 - Scattered or unheard complaints  
 - No centralized way for authorities to analyze feedback and detect problem areas  
 
----
 
 ## 💡 Proposed Solution
 This platform provides a central hub for collecting, storing, and visualizing complaints.
