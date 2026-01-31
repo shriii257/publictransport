@@ -28,7 +28,6 @@ This platform provides a central hub for collecting, storing, and visualizing co
 - **Route Hotspot Map:** Google Maps integration highlights problem-prone areas.  
 - **Admin Dashboard:** Manage and visualize complaints.  
 
----
 
 ## 🏗 Tech Stack
 | Layer     | Technology                  |
