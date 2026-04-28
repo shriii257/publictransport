@@ -38,6 +38,8 @@ def init_db():
                 transport_type TEXT NOT NULL,
                 route TEXT NOT NULL,
                 journey TEXT NOT NULL,
+                from_city TEXT,
+                to_city TEXT,
                 rating INTEGER NOT NULL,
                 problems TEXT,
                 comments TEXT,
@@ -53,6 +55,13 @@ def init_db():
                 ticket_size INTEGER
             )
         ''')
+
+        # Add from_city / to_city columns if upgrading an existing DB
+        for col in ('from_city', 'to_city'):
+            try:
+                cursor.execute(f'ALTER TABLE feedback ADD COLUMN {col} TEXT')
+            except Exception:
+                pass  # column already exists
         
         # Route hotspots table for map data
         cursor.execute('''
@@ -243,10 +252,21 @@ def submit_feedback():
         data = request.get_json()
         
         # Validate required fields
-        required_fields = ['transportType', 'route', 'journey', 'rating']
+        required_fields = ['transportType', 'route', 'rating']
         for field in required_fields:
             if not data.get(field):
                 return jsonify({'error': f'Missing required field: {field}'}), 400
+
+        # Validate city fields
+        from_city = data.get('fromCity', '').strip()
+        to_city   = data.get('toCity', '').strip()
+        if not from_city or not to_city:
+            return jsonify({'error': 'Missing required fields: fromCity and toCity'}), 400
+        if from_city == to_city:
+            return jsonify({'error': 'Departure and destination cities cannot be the same'}), 400
+
+        # Build composite journey string (keeps backward compat)
+        journey = data.get('journey') or f'{from_city} to {to_city}'
         
         # Generate unique ID
         feedback_id = str(uuid.uuid4())
@@ -264,17 +284,20 @@ def submit_feedback():
         with get_db() as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                INSERT INTO feedback 
-                (id, timestamp, transport_type, route, journey, rating, problems, 
-                 comments, status, priority, location_lat, location_lng, user_id,
+                INSERT INTO feedback
+                (id, timestamp, transport_type, route, journey, from_city, to_city,
+                 rating, problems, comments, status, priority,
+                 location_lat, location_lng, user_id,
                  has_ticket, ticket_name, ticket_path, ticket_type, ticket_size)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 feedback_id,
                 datetime.now().isoformat(),
                 data['transportType'],
                 data['route'],
-                data['journey'],
+                journey,
+                from_city,
+                to_city,
                 int(data['rating']),
                 problems,
                 data.get('comments', ''),
@@ -316,26 +339,36 @@ def get_feedback():
         transport_type = request.args.get('transport_type')
         priority = request.args.get('priority')
         status = request.args.get('status')
+        from_city = request.args.get('from_city')
+        to_city = request.args.get('to_city')
         limit = int(request.args.get('limit', 50))
-        
+
         with get_db() as conn:
             cursor = conn.cursor()
-            
+
             # Build query
             query = 'SELECT * FROM feedback WHERE 1=1'
             params = []
-            
+
             if transport_type:
                 query += ' AND transport_type = ?'
                 params.append(transport_type)
-            
+
             if priority:
                 query += ' AND priority = ?'
                 params.append(priority)
-            
+
             if status:
                 query += ' AND status = ?'
                 params.append(status)
+
+            if from_city:
+                query += ' AND from_city = ?'
+                params.append(from_city)
+
+            if to_city:
+                query += ' AND to_city = ?'
+                params.append(to_city)
             
             query += ' ORDER BY timestamp DESC LIMIT ?'
             params.append(limit)
@@ -613,15 +646,18 @@ def export_csv():
         writer = csv.writer(output)
         
         # Write header
-        writer.writerow(['ID', 'Timestamp', 'Transport Type', 'Route', 'Journey', 
-                        'Rating', 'Problems', 'Comments', 'Status', 'Priority', 
+        writer.writerow(['ID', 'Timestamp', 'Transport Type', 'Route', 'Journey',
+                        'From City', 'To City',
+                        'Rating', 'Problems', 'Comments', 'Status', 'Priority',
                         'Has Ticket', 'Ticket Name'])
         
         # Write data
         for row in feedback:
             writer.writerow([
-                row['id'], row['timestamp'], row['transport_type'], 
-                row['route'], row['journey'], row['rating'], 
+                row['id'], row['timestamp'], row['transport_type'],
+                row['route'], row['journey'],
+                row['from_city'] or '', row['to_city'] or '',
+                row['rating'],
                 row['problems'], row['comments'], row['status'], row['priority'],
                 'Yes' if row['has_ticket'] else 'No', row['ticket_name'] or 'N/A'
             ])

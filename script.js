@@ -8,6 +8,314 @@ let uploadedFile = null;
 let uploadedFileData = null; // Store file data for display
 let isAdminLoggedIn = false;
 
+// City Picker State
+let selectedFrom = '';
+let selectedTo = '';
+let activeCityDropdown = null; // 'from' | 'to' | null
+
+// ============================================================
+//  ALL INDIAN CITIES — comprehensive list with state labels
+// ============================================================
+const INDIAN_CITIES = [
+  // Andhra Pradesh
+  { name: 'Visakhapatnam', state: 'AP' }, { name: 'Vijayawada', state: 'AP' },
+  { name: 'Guntur', state: 'AP' }, { name: 'Nellore', state: 'AP' },
+  { name: 'Kurnool', state: 'AP' }, { name: 'Tirupati', state: 'AP' },
+  { name: 'Rajahmundry', state: 'AP' }, { name: 'Kakinada', state: 'AP' },
+  { name: 'Anantapur', state: 'AP' }, { name: 'Eluru', state: 'AP' },
+  // Arunachal Pradesh
+  { name: 'Itanagar', state: 'AR' }, { name: 'Naharlagun', state: 'AR' },
+  // Assam
+  { name: 'Guwahati', state: 'AS' }, { name: 'Silchar', state: 'AS' },
+  { name: 'Dibrugarh', state: 'AS' }, { name: 'Jorhat', state: 'AS' },
+  { name: 'Nagaon', state: 'AS' }, { name: 'Tezpur', state: 'AS' },
+  // Bihar
+  { name: 'Patna', state: 'BR' }, { name: 'Gaya', state: 'BR' },
+  { name: 'Muzaffarpur', state: 'BR' }, { name: 'Bhagalpur', state: 'BR' },
+  { name: 'Darbhanga', state: 'BR' }, { name: 'Purnia', state: 'BR' },
+  { name: 'Arrah', state: 'BR' }, { name: 'Bihar Sharif', state: 'BR' },
+  // Chhattisgarh
+  { name: 'Raipur', state: 'CG' }, { name: 'Bhilai', state: 'CG' },
+  { name: 'Bilaspur', state: 'CG' }, { name: 'Korba', state: 'CG' },
+  { name: 'Durg', state: 'CG' }, { name: 'Raigarh', state: 'CG' },
+  // Goa
+  { name: 'Panaji', state: 'GA' }, { name: 'Margao', state: 'GA' },
+  { name: 'Mapusa', state: 'GA' }, { name: 'Vasco da Gama', state: 'GA' },
+  // Gujarat
+  { name: 'Ahmedabad', state: 'GJ' }, { name: 'Surat', state: 'GJ' },
+  { name: 'Vadodara', state: 'GJ' }, { name: 'Rajkot', state: 'GJ' },
+  { name: 'Bhavnagar', state: 'GJ' }, { name: 'Jamnagar', state: 'GJ' },
+  { name: 'Gandhinagar', state: 'GJ' }, { name: 'Junagadh', state: 'GJ' },
+  { name: 'Anand', state: 'GJ' }, { name: 'Nadiad', state: 'GJ' },
+  { name: 'Bharuch', state: 'GJ' }, { name: 'Morbi', state: 'GJ' },
+  { name: 'Mehsana', state: 'GJ' }, { name: 'Navsari', state: 'GJ' },
+  { name: 'Surendranagar', state: 'GJ' }, { name: 'Porbandar', state: 'GJ' },
+  // Haryana
+  { name: 'Faridabad', state: 'HR' }, { name: 'Gurugram', state: 'HR' },
+  { name: 'Panipat', state: 'HR' }, { name: 'Ambala', state: 'HR' },
+  { name: 'Yamunanagar', state: 'HR' }, { name: 'Rohtak', state: 'HR' },
+  { name: 'Hisar', state: 'HR' }, { name: 'Karnal', state: 'HR' },
+  { name: 'Sonipat', state: 'HR' }, { name: 'Panchkula', state: 'HR' },
+  // Himachal Pradesh
+  { name: 'Shimla', state: 'HP' }, { name: 'Mandi', state: 'HP' },
+  { name: 'Solan', state: 'HP' }, { name: 'Dharamshala', state: 'HP' },
+  { name: 'Kullu', state: 'HP' }, { name: 'Manali', state: 'HP' },
+  // Jharkhand
+  { name: 'Ranchi', state: 'JH' }, { name: 'Jamshedpur', state: 'JH' },
+  { name: 'Dhanbad', state: 'JH' }, { name: 'Bokaro', state: 'JH' },
+  { name: 'Deoghar', state: 'JH' }, { name: 'Hazaribagh', state: 'JH' },
+  // Karnataka
+  { name: 'Bengaluru', state: 'KA' }, { name: 'Mysuru', state: 'KA' },
+  { name: 'Hubballi', state: 'KA' }, { name: 'Mangaluru', state: 'KA' },
+  { name: 'Belagavi', state: 'KA' }, { name: 'Kalaburagi', state: 'KA' },
+  { name: 'Davangere', state: 'KA' }, { name: 'Ballari', state: 'KA' },
+  { name: 'Tumkur', state: 'KA' }, { name: 'Shivamogga', state: 'KA' },
+  { name: 'Vijayapura', state: 'KA' }, { name: 'Raichur', state: 'KA' },
+  { name: 'Hassan', state: 'KA' }, { name: 'Dharwad', state: 'KA' },
+  // Kerala
+  { name: 'Thiruvananthapuram', state: 'KL' }, { name: 'Kochi', state: 'KL' },
+  { name: 'Kozhikode', state: 'KL' }, { name: 'Thrissur', state: 'KL' },
+  { name: 'Kollam', state: 'KL' }, { name: 'Alappuzha', state: 'KL' },
+  { name: 'Palakkad', state: 'KL' }, { name: 'Kannur', state: 'KL' },
+  { name: 'Kottayam', state: 'KL' }, { name: 'Malappuram', state: 'KL' },
+  // Madhya Pradesh
+  { name: 'Indore', state: 'MP' }, { name: 'Bhopal', state: 'MP' },
+  { name: 'Jabalpur', state: 'MP' }, { name: 'Gwalior', state: 'MP' },
+  { name: 'Ujjain', state: 'MP' }, { name: 'Sagar', state: 'MP' },
+  { name: 'Dewas', state: 'MP' }, { name: 'Satna', state: 'MP' },
+  { name: 'Ratlam', state: 'MP' }, { name: 'Rewa', state: 'MP' },
+  { name: 'Murwara', state: 'MP' }, { name: 'Singrauli', state: 'MP' },
+  // Maharashtra
+  { name: 'Mumbai', state: 'MH' }, { name: 'Pune', state: 'MH' },
+  { name: 'Nagpur', state: 'MH' }, { name: 'Nashik', state: 'MH' },
+  { name: 'Thane', state: 'MH' }, { name: 'Aurangabad', state: 'MH' },
+  { name: 'Solapur', state: 'MH' }, { name: 'Amravati', state: 'MH' },
+  { name: 'Kolhapur', state: 'MH' }, { name: 'Nanded', state: 'MH' },
+  { name: 'Sangli', state: 'MH' }, { name: 'Malegaon', state: 'MH' },
+  { name: 'Jalgaon', state: 'MH' }, { name: 'Akola', state: 'MH' },
+  { name: 'Latur', state: 'MH' }, { name: 'Dhule', state: 'MH' },
+  { name: 'Ahmednagar', state: 'MH' }, { name: 'Chandrapur', state: 'MH' },
+  { name: 'Parbhani', state: 'MH' }, { name: 'Bhiwandi', state: 'MH' },
+  { name: 'Navi Mumbai', state: 'MH' }, { name: 'Vasai-Virar', state: 'MH' },
+  { name: 'Mira-Bhayandar', state: 'MH' }, { name: 'Shirdi', state: 'MH' },
+  // Manipur
+  { name: 'Imphal', state: 'MN' }, { name: 'Thoubal', state: 'MN' },
+  // Meghalaya
+  { name: 'Shillong', state: 'ML' }, { name: 'Tura', state: 'ML' },
+  // Mizoram
+  { name: 'Aizawl', state: 'MZ' }, { name: 'Lunglei', state: 'MZ' },
+  // Nagaland
+  { name: 'Kohima', state: 'NL' }, { name: 'Dimapur', state: 'NL' },
+  // Odisha
+  { name: 'Bhubaneswar', state: 'OD' }, { name: 'Cuttack', state: 'OD' },
+  { name: 'Rourkela', state: 'OD' }, { name: 'Berhampur', state: 'OD' },
+  { name: 'Sambalpur', state: 'OD' }, { name: 'Puri', state: 'OD' },
+  // Punjab
+  { name: 'Ludhiana', state: 'PB' }, { name: 'Amritsar', state: 'PB' },
+  { name: 'Jalandhar', state: 'PB' }, { name: 'Patiala', state: 'PB' },
+  { name: 'Bathinda', state: 'PB' }, { name: 'Mohali', state: 'PB' },
+  { name: 'Pathankot', state: 'PB' }, { name: 'Hoshiarpur', state: 'PB' },
+  // Rajasthan
+  { name: 'Jaipur', state: 'RJ' }, { name: 'Jodhpur', state: 'RJ' },
+  { name: 'Udaipur', state: 'RJ' }, { name: 'Kota', state: 'RJ' },
+  { name: 'Bikaner', state: 'RJ' }, { name: 'Ajmer', state: 'RJ' },
+  { name: 'Alwar', state: 'RJ' }, { name: 'Sikar', state: 'RJ' },
+  { name: 'Bharatpur', state: 'RJ' }, { name: 'Sri Ganganagar', state: 'RJ' },
+  { name: 'Jaisalmer', state: 'RJ' }, { name: 'Pushkar', state: 'RJ' },
+  // Sikkim
+  { name: 'Gangtok', state: 'SK' }, { name: 'Namchi', state: 'SK' },
+  // Tamil Nadu
+  { name: 'Chennai', state: 'TN' }, { name: 'Coimbatore', state: 'TN' },
+  { name: 'Madurai', state: 'TN' }, { name: 'Tiruchirappalli', state: 'TN' },
+  { name: 'Salem', state: 'TN' }, { name: 'Tirunelveli', state: 'TN' },
+  { name: 'Erode', state: 'TN' }, { name: 'Vellore', state: 'TN' },
+  { name: 'Thoothukudi', state: 'TN' }, { name: 'Dindigul', state: 'TN' },
+  { name: 'Thanjavur', state: 'TN' }, { name: 'Ranipet', state: 'TN' },
+  { name: 'Sivakasi', state: 'TN' }, { name: 'Karur', state: 'TN' },
+  { name: 'Ooty', state: 'TN' }, { name: 'Kanchipuram', state: 'TN' },
+  { name: 'Kumbakonam', state: 'TN' }, { name: 'Hosur', state: 'TN' },
+  // Telangana
+  { name: 'Hyderabad', state: 'TS' }, { name: 'Warangal', state: 'TS' },
+  { name: 'Nizamabad', state: 'TS' }, { name: 'Karimnagar', state: 'TS' },
+  { name: 'Khammam', state: 'TS' }, { name: 'Mahbubnagar', state: 'TS' },
+  { name: 'Nalgonda', state: 'TS' }, { name: 'Secunderabad', state: 'TS' },
+  // Tripura
+  { name: 'Agartala', state: 'TR' }, { name: 'Udaipur', state: 'TR' },
+  // Uttar Pradesh
+  { name: 'Lucknow', state: 'UP' }, { name: 'Kanpur', state: 'UP' },
+  { name: 'Agra', state: 'UP' }, { name: 'Varanasi', state: 'UP' },
+  { name: 'Prayagraj', state: 'UP' }, { name: 'Meerut', state: 'UP' },
+  { name: 'Ghaziabad', state: 'UP' }, { name: 'Noida', state: 'UP' },
+  { name: 'Aligarh', state: 'UP' }, { name: 'Bareilly', state: 'UP' },
+  { name: 'Moradabad', state: 'UP' }, { name: 'Saharanpur', state: 'UP' },
+  { name: 'Gorakhpur', state: 'UP' }, { name: 'Jhansi', state: 'UP' },
+  { name: 'Mathura', state: 'UP' }, { name: 'Firozabad', state: 'UP' },
+  { name: 'Ayodhya', state: 'UP' }, { name: 'Muzaffarnagar', state: 'UP' },
+  { name: 'Shahjahanpur', state: 'UP' }, { name: 'Rampur', state: 'UP' },
+  { name: 'Hapur', state: 'UP' }, { name: 'Etawah', state: 'UP' },
+  { name: 'Sambhal', state: 'UP' }, { name: 'Amroha', state: 'UP' },
+  { name: 'Bulandshahr', state: 'UP' }, { name: 'Vrindavan', state: 'UP' },
+  // Uttarakhand
+  { name: 'Dehradun', state: 'UK' }, { name: 'Haridwar', state: 'UK' },
+  { name: 'Rishikesh', state: 'UK' }, { name: 'Roorkee', state: 'UK' },
+  { name: 'Haldwani', state: 'UK' }, { name: 'Nainital', state: 'UK' },
+  // West Bengal
+  { name: 'Kolkata', state: 'WB' }, { name: 'Howrah', state: 'WB' },
+  { name: 'Asansol', state: 'WB' }, { name: 'Siliguri', state: 'WB' },
+  { name: 'Durgapur', state: 'WB' }, { name: 'Bardhaman', state: 'WB' },
+  { name: 'Malda', state: 'WB' }, { name: 'Baharampur', state: 'WB' },
+  { name: 'Haldia', state: 'WB' }, { name: 'Kharagpur', state: 'WB' },
+  // UTs
+  { name: 'New Delhi', state: 'DL' }, { name: 'Delhi', state: 'DL' },
+  { name: 'Dwarka', state: 'DL' }, { name: 'Chandni Chowk', state: 'DL' },
+  { name: 'Chandigarh', state: 'CH' },
+  { name: 'Puducherry', state: 'PY' }, { name: 'Karaikal', state: 'PY' },
+  { name: 'Port Blair', state: 'AN' },
+  { name: 'Daman', state: 'DD' }, { name: 'Diu', state: 'DD' },
+  { name: 'Silvassa', state: 'DN' },
+  { name: 'Leh', state: 'LA' }, { name: 'Kargil', state: 'LA' },
+  { name: 'Srinagar', state: 'JK' }, { name: 'Jammu', state: 'JK' },
+  { name: 'Anantnag', state: 'JK' }, { name: 'Baramulla', state: 'JK' },
+  { name: 'Kavaratti', state: 'LD' },
+];
+// Sort alphabetically
+INDIAN_CITIES.sort((a, b) => a.name.localeCompare(b.name));
+
+// ============================================================
+//   CITY DROPDOWN FUNCTIONS
+// ============================================================
+function openCityDropdown(type) {
+    const dropdown = document.getElementById(type + 'Dropdown');
+    const btn = document.getElementById(type + 'Btn');
+    const searchInput = document.getElementById(type + 'Search');
+
+    // If same dropdown is already open — close it
+    if (activeCityDropdown === type) {
+        closeCityDropdown(type);
+        return;
+    }
+
+    // Close any other open dropdown first
+    if (activeCityDropdown) {
+        closeCityDropdown(activeCityDropdown, true);
+    }
+
+    activeCityDropdown = type;
+    renderCityList(type, '');
+    dropdown.classList.add('active');
+    btn.classList.add('open');
+
+    // Auto-focus search input
+    setTimeout(() => searchInput.focus(), 50);
+}
+
+function closeCityDropdown(type, immediate = false) {
+    const dropdown = document.getElementById(type + 'Dropdown');
+    const btn = document.getElementById(type + 'Btn');
+    const searchInput = document.getElementById(type + 'Search');
+
+    if (!dropdown.classList.contains('active')) return;
+
+    if (immediate) {
+        dropdown.classList.remove('active', 'closing');
+        btn.classList.remove('open');
+        searchInput.value = '';
+        if (activeCityDropdown === type) activeCityDropdown = null;
+        return;
+    }
+
+    dropdown.classList.add('closing');
+    setTimeout(() => {
+        dropdown.classList.remove('active', 'closing');
+        btn.classList.remove('open');
+        searchInput.value = '';
+        if (activeCityDropdown === type) activeCityDropdown = null;
+    }, 150);
+}
+
+function filterCities(type) {
+    const query = document.getElementById(type + 'Search').value;
+    renderCityList(type, query);
+}
+
+function renderCityList(type, query) {
+    const listEl = document.getElementById(type + 'CityList');
+    const q = query.toLowerCase().trim();
+    const filtered = q
+        ? INDIAN_CITIES.filter(c => c.name.toLowerCase().includes(q))
+        : INDIAN_CITIES;
+
+    if (filtered.length === 0) {
+        listEl.innerHTML = '<li class="no-results"><i class="fas fa-search" style="margin-right:8px;"></i>No cities found</li>';
+        return;
+    }
+
+    const selected = type === 'from' ? selectedFrom : selectedTo;
+    listEl.innerHTML = filtered.map(city => `
+        <li class="${city.name === selected ? 'selected' : ''}"
+            onclick="selectCity('${type}', '${city.name}', '${city.state}')">
+            <i class="fas fa-map-marker-alt"></i>
+            ${city.name}
+            <span class="city-state">${city.state}</span>
+        </li>
+    `).join('');
+}
+
+function selectCity(type, cityName, state) {
+    if (type === 'from') {
+        selectedFrom = cityName;
+        const label = document.getElementById('fromLabel');
+        label.textContent = cityName;
+        document.getElementById('fromBtn').classList.add('has-value');
+    } else {
+        selectedTo = cityName;
+        const label = document.getElementById('toLabel');
+        label.textContent = cityName;
+        document.getElementById('toBtn').classList.add('has-value');
+    }
+
+    // Update hidden journey field
+    updateJourneyField();
+    closeCityDropdown(type);
+}
+
+function swapCities() {
+    const tmp = selectedFrom;
+    selectedFrom = selectedTo;
+    selectedTo = tmp;
+
+    const fromLabel = document.getElementById('fromLabel');
+    const toLabel = document.getElementById('toLabel');
+    const fromBtn = document.getElementById('fromBtn');
+    const toBtn = document.getElementById('toBtn');
+
+    fromLabel.textContent = selectedFrom || 'Select departure city';
+    toLabel.textContent = selectedTo || 'Select destination city';
+    fromBtn.classList.toggle('has-value', !!selectedFrom);
+    toBtn.classList.toggle('has-value', !!selectedTo);
+
+    updateJourneyField();
+}
+
+function updateJourneyField() {
+    const journeyField = document.getElementById('journey');
+    if (journeyField) {
+        journeyField.value = selectedFrom && selectedTo
+            ? `${selectedFrom} to ${selectedTo}`
+            : (selectedFrom || selectedTo || '');
+    }
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+    if (!activeCityDropdown) return;
+    const dropdown = document.getElementById(activeCityDropdown + 'Dropdown');
+    const btn = document.getElementById(activeCityDropdown + 'Btn');
+    if (!dropdown.contains(e.target) && !btn.contains(e.target)) {
+        closeCityDropdown(activeCityDropdown);
+    }
+});
+
 // Admin credentials (in production, this should be server-side)
 const ADMIN_CREDENTIALS = {
     username: 'shriii257',
@@ -263,6 +571,8 @@ function initializeFormSubmission() {
                 transportType: document.getElementById('transportType').value,
                 route: document.getElementById('route').value,
                 journey: document.getElementById('journey').value,
+                fromCity: selectedFrom,
+                toCity: selectedTo,
                 rating: currentRating,
                 problems: selectedProblems.slice(),
                 comments: document.getElementById('comments').value,
@@ -310,13 +620,24 @@ function initializeFormSubmission() {
 function validateForm() {
     const transportType = document.getElementById('transportType').value;
     const route = document.getElementById('route').value;
-    const journey = document.getElementById('journey').value;
-    
-    if (!transportType || !route || !journey || !currentRating) {
+
+    if (!transportType || !route || !currentRating) {
         alert('Please fill in all required fields and provide a rating.');
         return false;
     }
-    
+
+    if (!selectedFrom || !selectedTo) {
+        alert('Please select both a departure city (From) and a destination city (To).');
+        if (!selectedFrom) document.getElementById('fromBtn').focus();
+        else document.getElementById('toBtn').focus();
+        return false;
+    }
+
+    if (selectedFrom === selectedTo) {
+        alert('Departure city and destination city cannot be the same.');
+        return false;
+    }
+
     return true;
 }
 
@@ -358,6 +679,17 @@ function resetForm() {
     
     document.getElementById('fileName').textContent = 'No file selected';
     document.getElementById('ticketUpload').value = '';
+
+    // Reset city picker
+    selectedFrom = '';
+    selectedTo = '';
+    const fromLabel = document.getElementById('fromLabel');
+    const toLabel = document.getElementById('toLabel');
+    if (fromLabel) fromLabel.textContent = 'Select departure city';
+    if (toLabel) toLabel.textContent = 'Select destination city';
+    document.getElementById('fromBtn').classList.remove('has-value');
+    document.getElementById('toBtn').classList.remove('has-value');
+    updateJourneyField();
 }
 
 // Public Dashboard Functions

@@ -53,11 +53,48 @@
                             <label><i class="fas fa-route"></i> Route/Line</label>
                             <input type="text" id="route" placeholder="e.g., Route 32, Blue Line" required>
                         </div>
-                        <div class="form-group">
-                            <label><i class="fas fa-map-marker-alt"></i> From - To</label>
-                            <input type="text" id="journey" placeholder="e.g., Shivaji Nagar to Kothrud" required>
+                    </div>
+
+                    <!-- RedBus-style From / To City Picker -->
+                    <div class="journey-picker-row">
+                        <div class="city-picker-group">
+                            <label><i class="fas fa-map-marker-alt"></i> From</label>
+                            <button type="button" class="city-picker-btn" id="fromBtn" onclick="openCityDropdown('from')">
+                                <span id="fromLabel">Select departure city</span>
+                                <i class="fas fa-chevron-down city-chevron"></i>
+                            </button>
+                            <!-- From dropdown -->
+                            <div class="city-dropdown" id="fromDropdown">
+                                <div class="city-search-box">
+                                    <i class="fas fa-search"></i>
+                                    <input type="text" id="fromSearch" placeholder="Search city..." oninput="filterCities('from')" autocomplete="off">
+                                </div>
+                                <ul class="city-list" id="fromCityList"></ul>
+                            </div>
+                        </div>
+
+                        <button type="button" class="swap-cities-btn" onclick="swapCities()" title="Swap cities">
+                            <i class="fas fa-exchange-alt"></i>
+                        </button>
+
+                        <div class="city-picker-group">
+                            <label><i class="fas fa-map-pin"></i> To</label>
+                            <button type="button" class="city-picker-btn" id="toBtn" onclick="openCityDropdown('to')">
+                                <span id="toLabel">Select destination city</span>
+                                <i class="fas fa-chevron-down city-chevron"></i>
+                            </button>
+                            <!-- To dropdown -->
+                            <div class="city-dropdown" id="toDropdown">
+                                <div class="city-search-box">
+                                    <i class="fas fa-search"></i>
+                                    <input type="text" id="toSearch" placeholder="Search city..." oninput="filterCities('to')" autocomplete="off">
+                                </div>
+                                <ul class="city-list" id="toCityList"></ul>
+                            </div>
                         </div>
                     </div>
+                    <!-- Hidden journey field for backward compatibility -->
+                    <input type="hidden" id="journey">
 
                     <div class="rating-section">
                         <label><i class="fas fa-star"></i> Overall Rating</label>
