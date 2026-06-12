@@ -56,11 +56,4 @@ publictransport/
 - Mobile app integration  
 - Real-time crowd density & delay tracking  
 
----
-
-## 🚀 Quick Start
-1️⃣ **Clone the Repository**
-```bash
-git clone https://github.com/shriii257/publictransport.git
-cd publictransport
 
